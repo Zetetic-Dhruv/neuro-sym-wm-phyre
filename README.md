@@ -1,26 +1,33 @@
 # Neuro-symbolic world model on PHYRE — results
 
-A scrolling results page for the **TOKW v0.4.0** temporal-observable Kripke world model,
-benchmarked **unmodified** on Meta's [PHYRE](https://github.com/facebookresearch/phyre)
-`ball_within_template` physics benchmark.
+Scrolling results for the **TOKW v0.4.0** world model, benchmarked **unmodified** on Meta's
+[PHYRE](https://github.com/facebookresearch/phyre) `ball_within_template` benchmark.
 
 Live site: **https://zetetic-dhruv.github.io/neuro-sym-wm-phyre/**
 
-## What this is
+- **`/` (landing)** — the **ground-truth eval**: atomic propositions computed directly from PHYRE's
+  exact physics (`featurized_objects`), no VLM in the loop. Includes a VLM-vs-ground-truth comparison.
+- **`/vlm/`** — the original run where Qwen2.5-VL supplies the vocabulary, the per-clip labels, *and*
+  the held-out reference (same oracle end to end).
 
-- A VLM (Qwen2.5-VL-7B) proposes the atomic-proposition vocabulary, labels event clips, and
-  provides the held-out reference. Only two small heads are trained: a latent-dynamics GRU and a
-  truth-dynamics transformer over a frozen DINOv2 encoder.
-- A PHYRE→TOKW dataset adapter was the only code added; the model code was run as-is.
+## The headline (ground truth vs VLM reference)
 
-## How to read the numbers
+Same model, two references. Against PHYRE physics the model is a real-but-modest predictor; the VLM
+reference had *undersold* it (it punished real changes the VLM never labelled).
 
-Raw next-frame accuracy (~0.98) is inflated by **label persistence** — only ~0.2% of frames change,
-so copying the previous label already scores ~0.998. The meaningful signal is **transition accuracy**
-(~0.59), measured only at the frames where the truth actually flips, where persistence scores 0 by
-construction. The page leads with this decomposition.
+| metric | VLM reference | ground truth |
+|---|---|---|
+| transition fraction | 0.22% | 4.1% |
+| persistence baseline | 0.998 | 0.959 |
+| autoregressive rollout | 0.976 | 0.929 |
+| **transition accuracy** | 0.594 | **0.600** |
+| frame-change precision | 0.067 | **0.417** |
+| **frame-change F1** | 0.125 | **0.579** |
+
+Under both references raw accuracy stays below persistence (physics is mostly static); the genuine
+signal is concentrated at transitions (~0.60), and is robust to the reference choice.
 
 ## Contents
 
-- `index.html` — the results page (open locally or via the live site)
-- `gifs/` — per-task held-out rollouts with predicted vs reference atomic propositions overlaid
+- `index.html`, `gifs/` — ground-truth results page + rollout GIFs (predicted vs physics labels)
+- `vlm/index.html`, `vlm/gifs/` — the VLM-reference results page + GIFs

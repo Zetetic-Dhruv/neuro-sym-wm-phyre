@@ -1,0 +1,143 @@
+<!doctype html><html lang=en><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width, initial-scale=1">
+<title>Neuro-symbolic world model on PHYRE</title>
+<style>
+:root{--bg:#0d0f14;--panel:#151922;--ink:#e8eaf0;--mut:#9aa3b2;--acc:#5dcaa5;--amber:#e0a93b;--line:#222836}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header{padding:64px 0 28px} h1{font-size:30px;font-weight:600;margin:0 0 10px}
+.sub{color:var(--mut);font-size:17px;max-width:760px}
+section{padding:30px 0;border-top:1px solid var(--line)} h2{font-size:20px;font-weight:600;margin:0 0 14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card .v{font-size:26px;font-weight:600;color:var(--acc)} .card .k{font-size:13px;margin-top:4px} .card .n{font-size:12px;color:var(--mut);margin-top:6px}
+.note{background:rgba(224,169,59,.08);border:1px solid rgba(224,169,59,.3);border-radius:10px;padding:14px 16px;color:#f0dcae;font-size:14px;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:14px} td,th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)} th{color:var(--mut);font-weight:500}
+.mono,.tag{font-family:ui-monospace,Menlo,monospace;font-size:13px} .muted{color:var(--mut)}
+.chip{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 10px;margin:3px;font-size:13px;color:#cdd4e0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.tile{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tile img{width:100%;display:block;background:#000}
+figcaption{padding:10px 12px;font-size:13px} .row{display:flex;justify-content:space-between;margin-bottom:6px}
+.agree{color:var(--acc)} .aps{color:var(--mut);font-size:12px;margin-top:2px} .aps b{color:#cdd4e0}
+footer{padding:40px 0;color:var(--mut);font-size:13px}
+</style></head><body><div class=wrap>
+<header>
+  <h1>Neuro-symbolic world model on PHYRE</h1>
+  <p class="sub">The TOKW v0.4.0 neuro-symbolic world model, benchmarked unmodified on PHYRE
+  (Qwen/Qwen2.5-VL-7B-Instruct supplies the symbol vocabulary, the per-clip labels,
+  and the held-out reference; only the latent GRU and the truth transformer are trained).</p>
+</header>
+
+<section>
+  <h2>Predictive power</h2>
+  <div class="cards"><div class="card"><div class="v">0.976</div><div class="k">autoregressive rollout acc</div><div class="n">seed v0, predict all later (inference path)</div></div><div class="card"><div class="v">0.979</div><div class="k">teacher-forced next-frame</div><div class="n">feed observed v_t</div></div><div class="card"><div class="v">0.998</div><div class="k">persistence baseline</div><div class="n">copy v_t — the bar to beat</div></div><div class="card"><div class="v">0.594</div><div class="k">transition accuracy</div><div class="n">correct when truth FLIPS (persistence=0) — the real signal</div></div><div class="card"><div class="v">0.125</div><div class="k">frame-change F1</div><div class="n">detecting when something changes</div></div><div class="card"><div class="v">10</div><div class="k">eval videos</div><div class="n">held-out tasks, same templates</div></div></div>
+  <div class="note"><b>Read this honestly.</b> Raw next-frame accuracy is inflated by label persistence —
+  most frames don't change, so copying the previous label already scores high. The number that means something is
+  <b>transition accuracy</b>: correctness at the frames where the truth actually flips, where the persistence baseline scores 0 by construction.</div>
+  <p class="muted" style="margin-top:12px">latent recovery of true reversals: recall 0.763, precision 0.2562, F1 0.3836</p>
+</section>
+
+<section>
+  <h2>Discovered structure</h2>
+  <table><thead><tr><th>timescale</th><th>Kripke states</th><th>transitions</th><th>rules</th></tr></thead>
+  <tbody><tr><td>event</td><td>14</td><td>33</td><td>19</td></tr><tr><td>long</td><td>9</td><td>17</td><td>17</td></tr></tbody></table>
+  <h2 style="margin-top:24px">Mined temporal rules (CTL)</h2>
+  <table><thead><tr><th>scale</th><th>formula</th><th>reading</th><th>conf</th><th>supp</th></tr></thead>
+  <tbody><tr><td>event</td><td class=mono>AG(AP_1bc85234dc -&gt; AP_560e1f32fb)</td><td>if &#x27;the number of balls remains three&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>5</td></tr><tr><td>event</td><td class=mono>AG(AP_868b0fddfa -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the red circle is moving upward&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>4</td></tr><tr><td>event</td><td class=mono>AG(AP_b55dd632ee -&gt; AP_560e1f32fb)</td><td>if &#x27;the blue ball is moving rightward&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>4</td></tr><tr><td>event</td><td class=mono>AG(AP_b55dd632ee -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the blue ball is moving rightward&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>4</td></tr><tr><td>event</td><td class=mono>AG(AP_a8b5e68c6c -&gt; AX AP_e881f4251f)</td><td>if &#x27;the blue circle is slowing down&#x27;, all next states satisfy &#x27;the red ball is moving downward&#x27;</td><td>1.00</td><td>3</td></tr><tr><td>event</td><td class=mono>AG(AP_fc9a199a3b -&gt; AP_560e1f32fb)</td><td>if &#x27;the red ball is moving&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>event</td><td class=mono>AG(AP_fc9a199a3b -&gt; AP_e881f4251f)</td><td>if &#x27;the red ball is moving&#x27;, then &#x27;the red ball is moving downward&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>event</td><td class=mono>AG(AP_fc9a199a3b -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the red ball is moving&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>event</td><td class=mono>AG(AP_fc9a199a3b -&gt; AX AP_e881f4251f)</td><td>if &#x27;the red ball is moving&#x27;, all next states satisfy &#x27;the red ball is moving downward&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>event</td><td class=mono>AG(AP_130a675df7 -&gt; AP_560e1f32fb)</td><td>if &#x27;the blue circle collides with the red circle&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>event</td><td class=mono>AG(AP_130a675df7 -&gt; AP_868b0fddfa)</td><td>if &#x27;the blue circle collides with the red circle&#x27;, then &#x27;the red circle is moving upward&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>event</td><td class=mono>AG(AP_130a675df7 -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the blue circle collides with the red circle&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>long</td><td class=mono>AG(AP_b55dd632ee -&gt; AP_560e1f32fb)</td><td>if &#x27;the blue ball is moving rightward&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>3</td></tr><tr><td>long</td><td class=mono>AG(AP_b55dd632ee -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the blue ball is moving rightward&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>3</td></tr><tr><td>long</td><td class=mono>AG(AP_1bc85234dc -&gt; AP_560e1f32fb)</td><td>if &#x27;the number of balls remains three&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>long</td><td class=mono>AG(AP_1bc85234dc -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the number of balls remains three&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>long</td><td class=mono>AG(AP_1bc85234dc -&gt; AX AP_e881f4251f)</td><td>if &#x27;the number of balls remains three&#x27;, all next states satisfy &#x27;the red ball is moving downward&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>long</td><td class=mono>AG(AP_868b0fddfa -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the red circle is moving upward&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>2</td></tr><tr><td>long</td><td class=mono>AG(AP_61799cd3cb -&gt; AP_560e1f32fb)</td><td>if &#x27;the red ball collides with the blue ball&#x27;, then &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>long</td><td class=mono>AG(AP_61799cd3cb -&gt; AP_b55dd632ee)</td><td>if &#x27;the red ball collides with the blue ball&#x27;, then &#x27;the blue ball is moving rightward&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>long</td><td class=mono>AG(AP_61799cd3cb -&gt; AX AP_1bc85234dc)</td><td>if &#x27;the red ball collides with the blue ball&#x27;, all next states satisfy &#x27;the number of balls remains three&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>long</td><td class=mono>AG(AP_61799cd3cb -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the red ball collides with the blue ball&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>long</td><td class=mono>AG(AP_61799cd3cb -&gt; AX AP_b55dd632ee)</td><td>if &#x27;the red ball collides with the blue ball&#x27;, all next states satisfy &#x27;the blue ball is moving rightward&#x27;</td><td>1.00</td><td>1</td></tr><tr><td>long</td><td class=mono>AG(AP_a8b5e68c6c -&gt; AX AP_560e1f32fb)</td><td>if &#x27;the blue circle is slowing down&#x27;, all next states satisfy &#x27;the red ball is slowing down&#x27;</td><td>1.00</td><td>1</td></tr></tbody></table>
+  <p class="muted" style="margin-top:10px">These are high-confidence co-occurrence patterns over the VLM labels, reported in CTL syntax — a description of the labelled dynamics, not a verified model.</p>
+</section>
+
+<section>
+  <h2>Atomic-proposition vocabulary <span class=muted style="font-weight:400">(proposed by the VLM)</span></h2>
+  <div><span class="chip">the red ball is moving downward</span><span class="chip">the blue ball is moving rightward</span><span class="chip">the green ball is stationary</span><span class="chip">the red ball collides with the blue ball</span><span class="chip">the red ball bounces after collision</span><span class="chip">the blue ball bounces after collision</span><span class="chip">the number of balls remains three</span><span class="chip">the red ball&#x27;s speed increases after collision</span><span class="chip">the blue ball&#x27;s speed decreases after collision</span><span class="chip">the blue circle is moving downward</span><span class="chip">the red circle is moving upward</span><span class="chip">the green circle is moving downward</span><span class="chip">the blue circle is slowing down</span><span class="chip">the red circle is speeding up</span><span class="chip">the green circle is speeding up</span><span class="chip">the blue circle collides with the red circle</span><span class="chip">the green circle collides with the red circle</span><span class="chip">the blue circle is partially obscured by the red circle</span><span class="chip">the green circle is partially obscured by the red circle</span><span class="chip">the blue circle is partially obscured by the green circle</span><span class="chip">the red circle is partially obscured by the green circle</span><span class="chip">the red ball is moving</span><span class="chip">the red ball is slowing down</span><span class="chip">the red ball is reversing direction</span><span class="chip">the blue ball is stationary</span><span class="chip">the green ball is moving</span><span class="chip">the green ball is slowing down</span><span class="chip">the green ball is reversing direction</span><span class="chip">there are three balls in the frame</span><span class="chip">the number of balls is decreasing</span><span class="chip">the balls collide</span><span class="chip">the red circle is on the left side</span><span class="chip">the blue circle is on the right side</span><span class="chip">the green circle is above the red circle</span><span class="chip">the red circle moves downward</span><span class="chip">the blue circle moves downward</span><span class="chip">the green circle moves downward</span><span class="chip">the red circle slows down</span><span class="chip">the blue circle slows down</span><span class="chip">the green circle slows down</span><span class="chip">the red circle collides with the green circle</span><span class="chip">the blue circle collides with the green circle</span><span class="chip">the red circle bounces off the green circle</span><span class="chip">the blue circle bounces off the green circle</span><span class="chip">the red circle is below the green circle</span><span class="chip">the blue circle is below the green circle</span><span class="chip">the red circle is smaller than the green circle</span><span class="chip">the blue circle is smaller than the green circle</span></div>
+</section>
+
+<section>
+  <h2>Held-out rollouts <span class=muted style="font-weight:400">— predicted vs reference labels</span></h2>
+  <div class="grid">
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01000.gif" alt="rollout task01000.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01000</span><span class="agree">agreement 0.95</span></div>
+          <div class="aps"><b>pred</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the red ball is slowing down, there are three balls in the frame</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01001.gif" alt="rollout task01001.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01001</span><span class="agree">agreement 0.99</span></div>
+          <div class="aps"><b>pred</b> the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the blue ball is moving rightward, the blue circle is moving downward, the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01002.gif" alt="rollout task01002.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01002</span><span class="agree">agreement 0.98</span></div>
+          <div class="aps"><b>pred</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01003.gif" alt="rollout task01003.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01003</span><span class="agree">agreement 0.97</span></div>
+          <div class="aps"><b>pred</b> the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01004.gif" alt="rollout task01004.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01004</span><span class="agree">agreement 0.98</span></div>
+          <div class="aps"><b>pred</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01005.gif" alt="rollout task01005.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01005</span><span class="agree">agreement 0.98</span></div>
+          <div class="aps"><b>pred</b> the number of balls remains three, the red ball is slowing down, the red circle is moving upward</div>
+          <div class="aps"><b>ref</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01006.gif" alt="rollout task01006.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01006</span><span class="agree">agreement 0.96</span></div>
+          <div class="aps"><b>pred</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the red ball is slowing down, there are three balls in the frame</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01007.gif" alt="rollout task01007.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01007</span><span class="agree">agreement 0.98</span></div>
+          <div class="aps"><b>pred</b> the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the number of balls remains three, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01008.gif" alt="rollout task01008.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01008</span><span class="agree">agreement 0.97</span></div>
+          <div class="aps"><b>pred</b> the blue ball is moving rightward, the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the blue ball is moving rightward, the number of balls remains three, the red ball is slowing down</div>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img loading="lazy" src="gifs/task01009.gif" alt="rollout task01009.gif">
+        <figcaption>
+          <div class="row"><span class="tag">task01009</span><span class="agree">agreement 1.00</span></div>
+          <div class="aps"><b>pred</b> the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+          <div class="aps"><b>ref</b> the number of balls remains three, the red ball is moving downward, the red ball is slowing down</div>
+        </figcaption>
+      </figure></div>
+</section>
+
+<footer>Run <span class=mono>dhruv-e1-phyre-tokw</span> · PHYRE Pendulum-v1 ·
+generated from streamed GCS artifacts. Model code unmodified; only a PHYRE→TOKW dataset adapter was added.</footer>
+</div></body></html>
