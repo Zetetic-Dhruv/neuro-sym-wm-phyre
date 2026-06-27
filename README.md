@@ -26,6 +26,7 @@ adding none of its own.
 | **F — Full model** | **0.721** | **0.490** |
 | E — Kripke Markov chain | 0.685 | 0.494 |
 | G — Untrained truth head (no training, 3 seeds) | 0.505 ±0.012 | 0.481 ±0.018 |
+| H — GRU deleted (`forward_dyn = None`) | 0.721 | 0.490 |
 | All-zeros null | 0.723 | — |
 
 A, B, C, D, F lie inside a 0.004 band on per-frame and 0.006 on transition accuracy: **persistence
@@ -38,6 +39,11 @@ moves the model from 0.50 to 0.72 per-frame and suppresses spurious flips from 0
 the architecture trains successfully; the converged solution is just "copy v₀". Every trained
 variant sits **at or below the all-zeros null (0.723)** — the 0.72 number is label sparsity, not a
 model signal.
+
+The H ablation (`forward_dyn = None`, same trained truth head as F) gives **byte-exact F metrics**
+(Δ = 0.000000) — the GRU latent-dynamics module is structurally unreachable from the prediction
+pipeline. Of the four trained components, only the frozen DINOv2 encoder is doing load-bearing
+work.
 
 ## Caveats
 

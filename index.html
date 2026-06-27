@@ -92,6 +92,7 @@ footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
       <tr><td><b>E</b></td><td><b>Kripke Markov chain</b></td><td><b>0.685</b></td><td>0.494</td><td><b>0.307</b></td></tr>
       <tr><td><b>F</b></td><td><b>Full model (e1 baseline)</b></td><td><b>0.721</b></td><td><b>0.490</b></td><td><b>0.270</b></td></tr>
       <tr><td>G</td><td>Untrained truth head (no training, 3 seeds)</td><td>0.505 <span class=muted style="font-size:11px">±0.012</span></td><td>0.481 <span class=muted style="font-size:11px">±0.018</span></td><td>0.494</td></tr>
+      <tr><td>H</td><td>GRU deleted (<code>forward_dyn = None</code>)</td><td>0.721</td><td>0.490</td><td>0.270</td></tr>
       <tr><td colspan="5" style="padding-top:14px;border-bottom:1px solid var(--line)"></td></tr>
       <tr class=muted><td>—</td><td>Labeller vs physics (ceiling)</td><td>0.720</td><td>0.489</td><td>—</td></tr>
       <tr class=muted><td>—</td><td>All-zeros null</td><td>0.723</td><td>—</td><td>—</td></tr>
@@ -105,6 +106,9 @@ footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
 
   <h3 style="margin-top:18px;font-size:16px;font-weight:600">Training does something — and the something is the trivial solution</h3>
   <p>The G control rules out the "all variants tie because nothing trains" story. The untrained truth head (random init, no gradient updates, same inputs as F) scores 0.505 per-frame and a 0.494 spurious-flip rate — random binary output. The trained variants (C, D, F) sit at 0.72 per-frame and 0.27 spurious-flip. So training <b>does</b> push the model somewhere specific: it learns to suppress spurious output and emit a v<sub>0</sub>-shaped sparse prediction. That move buys per-frame accuracy by matching the GT marginal label rate, but it adds zero transition lift — the trained models' 0.49 transition-acc is identical to the untrained head's 0.48 and to chance. The architecture trains, converges, and the converged solution is "copy v<sub>0</sub>".</p>
+
+  <h3 style="margin-top:18px;font-size:16px;font-weight:600">The GRU latent-dynamics module is structurally disconnected from prediction</h3>
+  <p>H deletes the GRU entirely (<code>model.forward_dyn = None</code>) and runs the same eval with the same trained truth head as F. Metrics are <b>byte-exact</b> identical to F (Δ per-frame = 0.000000, Δ transition = 0.000000). The autoregressive rollout never calls <code>forward_dyn</code>; it reads <code>z</code> from the frozen DINOv2 encoder directly. The GRU's two declared roles — feeding next-z to the truth head, and producing a surprise signal for event segmentation — are both unused in this pipeline: the truth head ignores its z-channel (D = F), and on PHYRE the segmenter <code>detect_state_events</code> is state-based, not surprise-based (<code>grounded_kripke.py:1138</code>). Of the four trained components — frozen DINOv2, GRU <i>g</i>, truth-transformer <i>h</i>, Kripke quotient — only DINOv2 (already pretrained) is doing load-bearing work.</p>
 
   <h3 style="margin-top:18px;font-size:16px;font-weight:600">E is worse, not equal</h3>
   <p>The Kripke Markov-chain ablation drops per-frame by 0.036 relative to F and raises spurious-flip from 0.270 to 0.307. Discretising the continuous truth into a finite state set and propagating with a learned transition matrix <b>actively destroys information</b> rather than matching the trivial baseline. It is the one configuration that moves the needle, and it moves it the wrong way.</p>
