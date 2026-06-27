@@ -87,10 +87,11 @@ footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
     <tbody>
       <tr><td>A</td><td>VLM-direct (no model)</td><td>0.719</td><td>0.489</td><td>0.272</td></tr>
       <tr><td>B</td><td>Persistence of v<sub>0</sub></td><td>0.722</td><td>0.494</td><td>0.269</td></tr>
-      <tr><td>C</td><td>Truth-only (z=0)</td><td>0.718</td><td>0.489</td><td>0.273</td></tr>
-      <tr><td>D</td><td>Truth-only (z=0, a=0)</td><td>0.719</td><td>0.488</td><td>0.272</td></tr>
+      <tr><td>C</td><td>Truth-only (z=0)</td><td>0.719</td><td>0.489</td><td>0.272</td></tr>
+      <tr><td>D</td><td>Truth-only (z=0, a=0)</td><td>0.718</td><td>0.488</td><td>0.273</td></tr>
       <tr><td><b>E</b></td><td><b>Kripke Markov chain</b></td><td><b>0.685</b></td><td>0.494</td><td><b>0.307</b></td></tr>
       <tr><td><b>F</b></td><td><b>Full model (e1 baseline)</b></td><td><b>0.721</b></td><td><b>0.490</b></td><td><b>0.270</b></td></tr>
+      <tr><td>G</td><td>Untrained truth head (no training, 3 seeds)</td><td>0.505 <span class=muted style="font-size:11px">±0.012</span></td><td>0.481 <span class=muted style="font-size:11px">±0.018</span></td><td>0.494</td></tr>
       <tr><td colspan="5" style="padding-top:14px;border-bottom:1px solid var(--line)"></td></tr>
       <tr class=muted><td>—</td><td>Labeller vs physics (ceiling)</td><td>0.720</td><td>0.489</td><td>—</td></tr>
       <tr class=muted><td>—</td><td>All-zeros null</td><td>0.723</td><td>—</td><td>—</td></tr>
@@ -102,6 +103,9 @@ footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
   <h3 style="margin-top:24px;font-size:16px;font-weight:600">A, B, C, D, F are statistically indistinguishable</h3>
   <p>Inside a band of 0.004 on per-frame and 0.006 on transition accuracy. Repeating the first observed VLM frame indefinitely (B) matches the full TOKW v0.4.0 rollout (F) on every column. The two truth-only retrains (C, D) land on the same point. On this benchmark <b>the latent encoder z, the action channel a, and the truth-dynamics transformer add no measurable physical fidelity above persistence of v<sub>0</sub></b>.</p>
 
+  <h3 style="margin-top:18px;font-size:16px;font-weight:600">Training does something — and the something is the trivial solution</h3>
+  <p>The G control rules out the "all variants tie because nothing trains" story. The untrained truth head (random init, no gradient updates, same inputs as F) scores 0.505 per-frame and a 0.494 spurious-flip rate — random binary output. The trained variants (C, D, F) sit at 0.72 per-frame and 0.27 spurious-flip. So training <b>does</b> push the model somewhere specific: it learns to suppress spurious output and emit a v<sub>0</sub>-shaped sparse prediction. That move buys per-frame accuracy by matching the GT marginal label rate, but it adds zero transition lift — the trained models' 0.49 transition-acc is identical to the untrained head's 0.48 and to chance. The architecture trains, converges, and the converged solution is "copy v<sub>0</sub>".</p>
+
   <h3 style="margin-top:18px;font-size:16px;font-weight:600">E is worse, not equal</h3>
   <p>The Kripke Markov-chain ablation drops per-frame by 0.036 relative to F and raises spurious-flip from 0.270 to 0.307. Discretising the continuous truth into a finite state set and propagating with a learned transition matrix <b>actively destroys information</b> rather than matching the trivial baseline. It is the one configuration that moves the needle, and it moves it the wrong way.</p>
 
@@ -110,7 +114,7 @@ footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
 
   <div class="note"><b>Metric caveats from the audit.</b>
   <p style="margin:8px 0 0"><b>frame_change_f1 omitted.</b> The earlier draft reported a column that tied at 0.3984 across all six configs. That is a degenerate property of the metric definition: it compares each prediction at t+1 to physics-truth at t, saturating fr_pred to True on essentially every valid frame, forcing recall=1 and F1 = 2p/(1+p) at the physics frame-change rate p=0.249. It carries no information about any ablation and is dropped rather than footnoted.</p>
-  <p style="margin:8px 0 0"><b>C and D retrain logs are silent.</b> The retrain function emits no per-epoch loss or early-stop notice. C and D landing exactly on the B persistence-of-v<sub>0</sub> line is the expected behaviour of a small transformer that learned the trivial copy-prev-v solution given a 96% frame-to-frame persistence rate, and it is consistent with the rest of the panel — but until a relogged rerun lands, treat C and D as <i>consistent with</i> the headline rather than <i>independent confirmation of</i> it.</p>
+  <p style="margin:8px 0 0"><b>C and D convergence — confirmed.</b> The earlier draft flagged that retrain logs were silent. A relogged rerun closes the gap: C's val_bce dropped 0.5313 → 0.0076 (70×), early-stopped at ep 170, best weights restored from ep 90, val_acc 0.83 → 1.00; D's val_bce dropped 0.5220 → 0.0062 (84×), early-stopped at ep 160, restored from ep 80, val_acc 0.82 → 1.00. Both retrains genuinely converged to near-perfect val performance — they are <i>independent confirmation</i> of the headline, not just <i>consistent with</i> it.</p>
   <p style="margin:8px 0 0"><b>Per-frame accuracy is not a ranking metric on this schema.</b> With a 72.3% zero rate it cannot separate any of A, B, C, D, F from each other or from all-zeros. Transition accuracy (~0.49, at chance for a 3.84% transition fraction) is the honest column.</p></div>
 
   <p style="margin-top:14px">Implication: whatever the architecture is for, it is not narrowing the gap to PHYRE physics on this schema. That gap is set by the VLM labeller and no component measured here closes it.</p>

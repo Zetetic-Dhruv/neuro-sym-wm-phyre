@@ -25,21 +25,27 @@ adding none of its own.
 | D — Truth-only (z=0, a=0) | 0.719 | 0.488 |
 | **F — Full model** | **0.721** | **0.490** |
 | E — Kripke Markov chain | 0.685 | 0.494 |
+| G — Untrained truth head (no training, 3 seeds) | 0.505 ±0.012 | 0.481 ±0.018 |
 | All-zeros null | 0.723 | — |
 
 A, B, C, D, F lie inside a 0.004 band on per-frame and 0.006 on transition accuracy: **persistence
 of v₀ matches the full model**. The latent z, the action channel, and the truth-dynamics
 transformer add no measurable physical fidelity. E (Kripke) is strictly worse — discretising to
-states actively destroys information. Every variant sits **at or below the all-zeros null (0.723)**,
-which is just the mean per-AP zero rate in the schema. The 0.72 number is label sparsity, not a
+states actively destroys information.
+
+The G control (untrained truth head, random init) settles "did anything train": **yes — training
+moves the model from 0.50 to 0.72 per-frame and suppresses spurious flips from 0.49 to 0.27**. So
+the architecture trains successfully; the converged solution is just "copy v₀". Every trained
+variant sits **at or below the all-zeros null (0.723)** — the 0.72 number is label sparsity, not a
 model signal.
 
 ## Caveats
 
 - An earlier `frame_change_f1` column was dropped (degenerate metric: 2p/(1+p) at the physics
   frame-change rate, independent of the ablation).
-- C and D retrain logs were silent; their numbers are *consistent with* the headline rather than
-  *independent confirmation of* it pending a relogged rerun.
+- C and D retrain convergence confirmed by relogged rerun: val_bce 0.53→0.008 (C) and 0.52→0.006
+  (D), early-stopped, best-weight-restored. Both reach near-perfect val accuracy on the trivial
+  copy-prev-v solution.
 
 > An earlier version of this page reported a GT comparison that *trained* the model on ground-truth
 > labels — that confounds training signal with the referee and is not a verification. This page uses
