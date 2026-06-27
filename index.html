@@ -1,165 +1,85 @@
 <!doctype html><html lang=en><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width, initial-scale=1">
-<title>Neuro-symbolic world model on PHYRE — ground-truth eval</title>
+<title>Does the world model track physics? — PHYRE ground-truth verification</title>
 <style>
-:root{--bg:#0d0f14;--panel:#151922;--ink:#e8eaf0;--mut:#9aa3b2;--acc:#5dcaa5;--amber:#e0a93b;--line:#222836}
+:root{--bg:#0d0f14;--panel:#151922;--ink:#e8eaf0;--mut:#9aa3b2;--acc:#5dcaa5;--warn:#e0a93b;--line:#222836}
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,Segoe UI,Roboto,sans-serif}
 .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
 header{padding:64px 0 28px} h1{font-size:30px;font-weight:600;margin:0 0 10px}
-.sub{color:var(--mut);font-size:17px;max-width:760px}
+.sub{color:var(--mut);font-size:17px;max-width:780px}
 section{padding:30px 0;border-top:1px solid var(--line)} h2{font-size:20px;font-weight:600;margin:0 0 14px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
 .card .v{font-size:26px;font-weight:600;color:var(--acc)} .card .k{font-size:13px;margin-top:4px} .card .n{font-size:12px;color:var(--mut);margin-top:6px}
 .note{background:rgba(224,169,59,.08);border:1px solid rgba(224,169,59,.3);border-radius:10px;padding:14px 16px;color:#f0dcae;font-size:14px;margin-top:14px}
 table{width:100%;border-collapse:collapse;font-size:14px} td,th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)} th{color:var(--mut);font-weight:500}
-.mono,.tag{font-family:ui-monospace,Menlo,monospace;font-size:13px} .muted{color:var(--mut)}
-.chip{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px 10px;margin:3px;font-size:13px;color:#cdd4e0}
+.muted{color:var(--mut)} .mono{font-family:ui-monospace,Menlo,monospace;font-size:13px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .tile{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.tile img{width:100%;display:block;background:#000}
-figcaption{padding:10px 12px;font-size:13px} .row{display:flex;justify-content:space-between;margin-bottom:6px}
-.agree{color:var(--acc)} .aps{color:var(--mut);font-size:12px;margin-top:2px} .aps b{color:#cdd4e0}
-footer{padding:40px 0;color:var(--mut);font-size:13px}
+.tile img{width:100%;display:block;background:#000} figcaption{padding:10px 12px;font-size:13px}
+.row{display:flex;justify-content:space-between;margin-bottom:6px} .agree{color:var(--acc)} .aps{color:var(--mut);font-size:12px}
+footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
 </style></head><body><div class=wrap>
 <header>
-  <h1>Neuro-symbolic world model on PHYRE — ground-truth eval</h1>
-  <p class="sub">The TOKW v0.4.0 neuro-symbolic world model on PHYRE, evaluated against
-  <b>PHYRE's exact physics ground truth</b> (no VLM anywhere): atomic propositions are computed
-  directly from <code>featurized_objects</code> — per-object motion direction, speed trend, and
-  contacts, finite-differenced from real positions. Only the latent GRU and the truth transformer
-  are trained.</p>
+  <h1>Does the world model track physics?</h1>
+  <p class="sub">A clean verification of the TOKW v0.4.0 world model on PHYRE. The <b>same VLM-trained
+  model</b> from the original run is taken unchanged; its predictions (seeded from the VLM-observed first
+  frame, identical to that run) are scored against <b>two referees</b> — the Qwen VLM labels it was
+  trained to mimic, and PHYRE's exact physics computed from <code>featurized_objects</code>. Ground truth
+  is only the answer key: it never enters training or the seed.</p>
 </header>
 
 <section>
-  <h2>Predictive power</h2>
-  <div class="cards"><div class="card"><div class="v">0.929</div><div class="k">autoregressive rollout acc</div><div class="n">seed v0, predict all later (inference path)</div></div><div class="card"><div class="v">0.934</div><div class="k">teacher-forced next-frame</div><div class="n">feed observed v_t</div></div><div class="card"><div class="v">0.959</div><div class="k">persistence baseline</div><div class="n">copy v_t — the bar to beat</div></div><div class="card"><div class="v">0.600</div><div class="k">transition accuracy</div><div class="n">correct when truth FLIPS (persistence=0) — the real signal</div></div><div class="card"><div class="v">0.579</div><div class="k">frame-change F1</div><div class="n">detecting when something changes</div></div><div class="card"><div class="v">10</div><div class="k">eval videos</div><div class="n">held-out tasks, same templates</div></div></div>
-  <div class="note"><b>Read this honestly.</b> Raw accuracy is still inflated by persistence — even real
-  physics is mostly static (96% of frames unchanged), so copying the previous label scores 0.959. The
-  meaningful number is <b>transition accuracy</b> (~0.60), measured only where the truth actually flips,
-  where persistence scores 0 by construction. The model is a real-but-modest physics predictor, not a
-  state-of-the-art one.</div>
-
-  <h2 style="margin-top:26px">Reference choice changes the picture</h2>
-  <p class="muted" style="margin-top:0">Same model, two references: the original VLM-labelled reference
-  (Qwen labelling held-out clips — the same oracle that trained it) vs. PHYRE's exact physics ground truth.</p>
-  <table>
-    <thead><tr><th>metric</th><th>VLM reference</th><th>ground truth</th><th>what it tells us</th></tr></thead>
-    <tbody>
-      <tr><td>transition fraction</td><td>0.22%</td><td>4.1%</td><td>GT captures ~19× more real changes; the VLM reference was sparse</td></tr>
-      <tr><td>persistence baseline</td><td>0.998</td><td>0.959</td><td>real room above the copy baseline now exists</td></tr>
-      <tr><td>autoregressive rollout</td><td>0.976</td><td>0.929</td><td>raw accuracy still below persistence under both</td></tr>
-      <tr><td><b>transition accuracy</b></td><td>0.594</td><td><b>0.600</b></td><td>the genuine signal — robust to the reference (~60%)</td></tr>
-      <tr><td>frame-change precision</td><td>0.067</td><td><b>0.417</b></td><td>VLM punished real changes it never labelled</td></tr>
-      <tr><td><b>frame-change F1</b></td><td>0.125</td><td><b>0.579</b></td><td>against physics, change-detection is far better calibrated</td></tr>
-    </tbody>
-  </table>
-  <p class="muted" style="margin-top:10px">Takeaway: the VLM-as-reference eval <b>undersold</b> the model. Measured against
-  real physics, its predictive power is modest but genuine and concentrated at transitions — and there is no
-  circularity, since the reference no longer comes from the same oracle that produced the training labels.</p>
+  <h2>The model imitates the labeller, not the physics</h2>
+  <div class="cards">
+    <div class="card"><div class="v">0.97</div><div class="k">agreement with the VLM oracle</div><div class="n">per-frame, 38 mappable propositions</div></div>
+    <div class="card"><div class="v">0.72</div><div class="k">agreement with physics</div><div class="n">below the 0.96 persistence baseline</div></div>
+    <div class="card"><div class="v">0.49</div><div class="k">transition accuracy vs physics</div><div class="n">correct at real physical changes</div></div>
+    <div class="card"><div class="v">0.27</div><div class="k">spurious-flip rate vs physics</div><div class="n">flips when physics says nothing changed</div></div>
+  </div>
+  <div class="note"><b>Read this honestly.</b> Held fixed and re-graded against real physics, the model agrees
+  with the Qwen oracle it was trained on (~0.97) far more than with the world (~0.72). At the moments that
+  matter it predicts physical transitions correctly only ~49% of the time and spuriously flips propositions
+  at 27% of stable frames — it has learned to reproduce the VLM's labelling, not the environment's dynamics.</div>
 </section>
 
 <section>
-  <h2>Discovered structure</h2>
-  <table><thead><tr><th>timescale</th><th>Kripke states</th><th>transitions</th><th>rules</th></tr></thead>
-  <tbody><tr><td>event</td><td>52</td><td>93</td><td>100</td></tr><tr><td>long</td><td>33</td><td>37</td><td>100</td></tr></tbody></table>
-  <h2 style="margin-top:24px">Mined temporal rules (CTL)</h2>
-  <table><thead><tr><th>scale</th><th>formula</th><th>reading</th><th>conf</th><th>supp</th></tr></thead>
-  <tbody><tr><td>event</td><td class=mono>AG(GT_13afc6bf1b -&gt; GT_3e077a1359)</td><td>if &#x27;the blue object is stationary&#x27;, then &#x27;the red object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_13afc6bf1b -&gt; GT_462f2e4db8)</td><td>if &#x27;the blue object is stationary&#x27;, then &#x27;the green object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_13afc6bf1b -&gt; GT_9a00cd121d)</td><td>if &#x27;the blue object is stationary&#x27;, then &#x27;the red object moves left&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_3e077a1359 -&gt; GT_13afc6bf1b)</td><td>if &#x27;the red object is stationary&#x27;, then &#x27;the blue object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_3e077a1359 -&gt; GT_462f2e4db8)</td><td>if &#x27;the red object is stationary&#x27;, then &#x27;the green object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_3e077a1359 -&gt; GT_9a00cd121d)</td><td>if &#x27;the red object is stationary&#x27;, then &#x27;the red object moves left&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_462f2e4db8 -&gt; GT_13afc6bf1b)</td><td>if &#x27;the green object is stationary&#x27;, then &#x27;the blue object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_462f2e4db8 -&gt; GT_3e077a1359)</td><td>if &#x27;the green object is stationary&#x27;, then &#x27;the red object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_462f2e4db8 -&gt; GT_9a00cd121d)</td><td>if &#x27;the green object is stationary&#x27;, then &#x27;the red object moves left&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_9a00cd121d -&gt; GT_13afc6bf1b)</td><td>if &#x27;the red object moves left&#x27;, then &#x27;the blue object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_9a00cd121d -&gt; GT_3e077a1359)</td><td>if &#x27;the red object moves left&#x27;, then &#x27;the red object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>event</td><td class=mono>AG(GT_9a00cd121d -&gt; GT_462f2e4db8)</td><td>if &#x27;the red object moves left&#x27;, then &#x27;the green object is stationary&#x27;</td><td>1.00</td><td>52</td></tr><tr><td>long</td><td class=mono>AG(GT_13afc6bf1b -&gt; GT_3e077a1359)</td><td>if &#x27;the blue object is stationary&#x27;, then &#x27;the red object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_13afc6bf1b -&gt; GT_462f2e4db8)</td><td>if &#x27;the blue object is stationary&#x27;, then &#x27;the green object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_13afc6bf1b -&gt; GT_9a00cd121d)</td><td>if &#x27;the blue object is stationary&#x27;, then &#x27;the red object moves left&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_3e077a1359 -&gt; GT_13afc6bf1b)</td><td>if &#x27;the red object is stationary&#x27;, then &#x27;the blue object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_3e077a1359 -&gt; GT_462f2e4db8)</td><td>if &#x27;the red object is stationary&#x27;, then &#x27;the green object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_3e077a1359 -&gt; GT_9a00cd121d)</td><td>if &#x27;the red object is stationary&#x27;, then &#x27;the red object moves left&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_462f2e4db8 -&gt; GT_13afc6bf1b)</td><td>if &#x27;the green object is stationary&#x27;, then &#x27;the blue object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_462f2e4db8 -&gt; GT_3e077a1359)</td><td>if &#x27;the green object is stationary&#x27;, then &#x27;the red object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_462f2e4db8 -&gt; GT_9a00cd121d)</td><td>if &#x27;the green object is stationary&#x27;, then &#x27;the red object moves left&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_9a00cd121d -&gt; GT_13afc6bf1b)</td><td>if &#x27;the red object moves left&#x27;, then &#x27;the blue object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_9a00cd121d -&gt; GT_3e077a1359)</td><td>if &#x27;the red object moves left&#x27;, then &#x27;the red object is stationary&#x27;</td><td>1.00</td><td>33</td></tr><tr><td>long</td><td class=mono>AG(GT_9a00cd121d -&gt; GT_462f2e4db8)</td><td>if &#x27;the red object moves left&#x27;, then &#x27;the green object is stationary&#x27;</td><td>1.00</td><td>33</td></tr></tbody></table>
-  <p class="muted" style="margin-top:10px">These are high-confidence co-occurrence patterns over the VLM labels, reported in CTL syntax — a description of the labelled dynamics, not a verified model.</p>
+  <h2>Same model, same predictions, two referees</h2>
+  <p class="muted" style="margin-top:0">38 of the 48 atomic propositions are physically computable; the 10
+  conditional/perceptual ones ("…after collision", "bounces off", "partially obscured by") are excluded.</p>
+  <table><thead><tr><th>metric</th><th>vs VLM oracle</th><th>vs physics (GT)</th><th>reading</th></tr></thead>
+  <tbody><tr><td>per-frame accuracy</td><td>0.974</td><td><b>0.721</b></td><td class=muted>model matches the VLM oracle, not physics</td></tr><tr><td>persistence baseline</td><td>0.997</td><td><b>0.962</b></td><td class=muted>vs physics the model falls BELOW it</td></tr><tr><td>autoregressive rollout</td><td>0.970</td><td><b>0.720</b></td><td class=muted>self-rolled inference path</td></tr><tr><td>transition accuracy</td><td>0.594</td><td><b>0.490</b></td><td class=muted>correct at real physical changes — the clean number</td></tr><tr><td>spurious-flip rate</td><td>0.025</td><td><b>0.270</b></td><td class=muted>flips a proposition when physics says no change</td></tr><tr><td>frame-change precision</td><td>0.067</td><td><b>0.249</b></td><td class=muted>when it predicts a change, is there one?</td></tr></tbody></table>
+  <p class="muted" style="margin-top:10px">Note: frame-change F1 is higher against physics (0.398 vs 0.124)
+  only because there are ~14× more real transitions to catch — a base-rate artifact. Transition accuracy is the
+  base-rate-free number, and it is lower against physics (0.49).</p>
 </section>
 
 <section>
-  <h2>Atomic-proposition vocabulary <span class=muted style="font-weight:400">(proposed by the VLM)</span></h2>
-  <div><span class="chip">the red object moves up</span><span class="chip">the red object moves down</span><span class="chip">the red object moves left</span><span class="chip">the red object moves right</span><span class="chip">the red object is stationary</span><span class="chip">the red object speeds up</span><span class="chip">the red object slows down</span><span class="chip">the green object moves up</span><span class="chip">the green object moves down</span><span class="chip">the green object moves left</span><span class="chip">the green object moves right</span><span class="chip">the green object is stationary</span><span class="chip">the green object speeds up</span><span class="chip">the green object slows down</span><span class="chip">the blue object moves up</span><span class="chip">the blue object moves down</span><span class="chip">the blue object moves left</span><span class="chip">the blue object moves right</span><span class="chip">the blue object is stationary</span><span class="chip">the blue object speeds up</span><span class="chip">the blue object slows down</span><span class="chip">the red and green objects touch</span><span class="chip">the red and blue objects touch</span><span class="chip">the green and blue objects touch</span></div>
+  <h2>Held-out rollouts — model prediction vs physics</h2>
+  <div class="grid"><figure class="tile"><img loading="lazy" src="gifs/task01000.gif" alt="rollout task01000.gif">
+    <figcaption><div class="row"><span class="tag">task1000</span><span class="agree">vs physics 0.71</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01001.gif" alt="rollout task01001.gif">
+    <figcaption><div class="row"><span class="tag">task1001</span><span class="agree">vs physics 0.74</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01002.gif" alt="rollout task01002.gif">
+    <figcaption><div class="row"><span class="tag">task1002</span><span class="agree">vs physics 0.70</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01003.gif" alt="rollout task01003.gif">
+    <figcaption><div class="row"><span class="tag">task1003</span><span class="agree">vs physics 0.74</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01004.gif" alt="rollout task01004.gif">
+    <figcaption><div class="row"><span class="tag">task1004</span><span class="agree">vs physics 0.72</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01005.gif" alt="rollout task01005.gif">
+    <figcaption><div class="row"><span class="tag">task1005</span><span class="agree">vs physics 0.71</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01006.gif" alt="rollout task01006.gif">
+    <figcaption><div class="row"><span class="tag">task1006</span><span class="agree">vs physics 0.71</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01007.gif" alt="rollout task01007.gif">
+    <figcaption><div class="row"><span class="tag">task1007</span><span class="agree">vs physics 0.78</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01008.gif" alt="rollout task01008.gif">
+    <figcaption><div class="row"><span class="tag">task1008</span><span class="agree">vs physics 0.73</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure><figure class="tile"><img loading="lazy" src="gifs/task01009.gif" alt="rollout task01009.gif">
+    <figcaption><div class="row"><span class="tag">task1009</span><span class="agree">vs physics 0.68</span></div>
+    <div class="aps">green = model prediction · white = PHYRE physics</div></figcaption></figure></div>
 </section>
 
-<section>
-  <h2>Held-out rollouts <span class=muted style="font-weight:400">— predicted vs reference labels</span></h2>
-  <div class="grid">
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01000.gif" alt="rollout task01000.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01000</span><span class="agree">agreement 0.97</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object slows down, the blue object speeds up, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01001.gif" alt="rollout task01001.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01001</span><span class="agree">agreement 0.79</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object moves right, the blue object speeds up, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves left, the blue object moves up, the blue object slows down, the blue object speeds up</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01002.gif" alt="rollout task01002.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01002</span><span class="agree">agreement 0.96</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object slows down, the blue object speeds up, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01003.gif" alt="rollout task01003.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01003</span><span class="agree">agreement 0.97</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object slows down, the blue object speeds up, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01004.gif" alt="rollout task01004.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01004</span><span class="agree">agreement 0.89</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object speeds up, the green object is stationary, the green object moves down, the green object speeds up</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves left, the blue object moves right, the blue object slows down, the blue object speeds up</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01005.gif" alt="rollout task01005.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01005</span><span class="agree">agreement 0.95</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object speeds up, the green object is stationary, the green object moves down, the green object speeds up</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01006.gif" alt="rollout task01006.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01006</span><span class="agree">agreement 0.98</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object slows down, the blue object speeds up, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01007.gif" alt="rollout task01007.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01007</span><span class="agree">agreement 0.95</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object slows down, the blue object speeds up, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01008.gif" alt="rollout task01008.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01008</span><span class="agree">agreement 0.92</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object moves right, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure>
-      <figure class="tile">
-        <img loading="lazy" src="gifs/task01009.gif" alt="rollout task01009.gif">
-        <figcaption>
-          <div class="row"><span class="tag">task01009</span><span class="agree">agreement 0.88</span></div>
-          <div class="aps"><b>pred</b> the blue object is stationary, the blue object moves down, the blue object speeds up, the green and blue objects touch, the green object is stationary, the green object moves down</div>
-          <div class="aps"><b>ref</b> the blue object is stationary, the blue object moves down, the blue object moves up, the blue object slows down, the blue object speeds up, the green object is stationary</div>
-        </figcaption>
-      </figure></div>
-</section>
-
-<footer>Run <span class=mono>dhruv-e2-phyre-gt</span> · PHYRE ball_within_template, ground-truth eval ·
-model code unmodified; only a PHYRE→TOKW dataset adapter was added.<br>
-See also the original <a href="vlm/" style="color:var(--acc)">VLM-reference run</a> (same model, Qwen-labelled reference).</footer>
+<footer>Run <span class=mono>dhruv-e3-phyre-verify</span> · PHYRE ball_within_template · ground truth from
+<span class=mono>featurized_objects</span>, model unchanged, GT used only as verifier (never in training or the seed).<br>
+See also the original <a href="vlm/">VLM-reference run</a> (where Qwen also supplies the eval reference).</footer>
 </div></body></html>
