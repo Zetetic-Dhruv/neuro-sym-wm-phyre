@@ -55,6 +55,31 @@ footer{padding:40px 0;color:var(--mut);font-size:13px} a{color:var(--acc)}
 </section>
 
 <section>
+  <h2>Where does the error come from?</h2>
+  <p class="muted" style="margin-top:0">Scoring the <b>Qwen VLM labels themselves</b> against physics —
+  no model involved — isolates the labeller's own physical fidelity:</p>
+  <div class="cards">
+    <div class="card"><div class="v">0.72</div><div class="k">labeller vs physics</div><div class="n">per-cell, on the propositions it asserts</div></div>
+    <div class="card"><div class="v">0.49</div><div class="k">labeller at transitions</div><div class="n">at chance — no directional signal</div></div>
+    <div class="card"><div class="v">~28%</div><div class="k">of labelled cells disagree with physics</div><div class="n">the labeller is the noisy component</div></div>
+  </div>
+  <p class="muted" style="margin-top:16px">Putting the three relationships side by side decomposes the model's error:</p>
+  <table>
+    <thead><tr><th>relationship</th><th>per-frame</th><th>at transitions</th></tr></thead>
+    <tbody>
+      <tr><td>model &harr; VLM labeller</td><td>0.974</td><td>0.594</td></tr>
+      <tr><td>VLM labeller &harr; physics</td><td>0.720</td><td>0.489</td></tr>
+      <tr><td>model &harr; physics</td><td>0.721</td><td>0.490</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><b>The model is a faithful mirror of the labeller.</b> Its physics numbers (0.721 / 0.490)
+  are almost identical to the labeller's (0.720 / 0.489): the model inherits the labeller's ~28% physical
+  error and its at-chance transitions exactly — neither correcting nor compounding them. The neuro-symbolic
+  model works as designed (it propagates its symbol source); its physical fidelity is simply <i>capped by</i>
+  the oracle it imitates, and that oracle is a mediocre physics labeller.</div>
+</section>
+
+<section>
   <h2>Held-out rollouts — model prediction vs physics</h2>
   <div class="grid"><figure class="tile"><img loading="lazy" src="gifs/task01000.gif" alt="rollout task01000.gif">
     <figcaption><div class="row"><span class="tag">task1000</span><span class="agree">vs physics 0.71</span></div>
